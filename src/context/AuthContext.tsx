@@ -4,6 +4,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@/types';
 import toast from 'react-hot-toast';
+import { authClient } from '@/lib/auth-client';
 
 interface AuthContextType {
   user: User | null;
@@ -19,7 +20,7 @@ const defaultUser: User = {
   id: 'usr_1',
   name: 'Nafisa',
   email: 'nafisa@example.com',
-  avatar: 'https://lh3.googleusercontent.com/a/ACg8ocLUgjTqCw52Iza4b6tW6q-qn97zSm0vNvSmS-Dpgh9vCUq3CieO=s192-c-mo',
+  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&h=256&q=80',
   role: 'User'
 };
 
@@ -30,20 +31,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('bazardor_user');
-      if (stored) {
-        setUser(JSON.parse(stored));
-      } else {
-       
+    async function loadUserSession() {
+      try {
+        const { data: session } = await authClient.getSession();
+        if (session?.user) {
+          const authUser: User = {
+            id: session.user.id,
+            name: session.user.name || 'ব্যবহারকারী',
+            email: session.user.email,
+            avatar: session.user.image || '',
+            role: 'User'
+          };
+          setUser(authUser);
+          localStorage.setItem('bazardor_user', JSON.stringify(authUser));
+          return;
+        }
+
+        const stored = localStorage.getItem('bazardor_user');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setUser(parsed);
+        } else {
+          setUser(defaultUser);
+          localStorage.setItem('bazardor_user', JSON.stringify(defaultUser));
+        }
+      } catch {
         setUser(defaultUser);
-        localStorage.setItem('bazardor_user', JSON.stringify(defaultUser));
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      setUser(defaultUser);
-    } finally {
-      setLoading(false);
     }
+
+    loadUserSession();
   }, []);
 
   const signIn = async (email: string, password?: string): Promise<boolean> => {
@@ -84,20 +103,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const socialSignIn = async (provider: 'google' | 'github'): Promise<boolean> => {
-    const newUser: User = {
-      id: `usr_${Date.now()}`,
-      name: provider === 'google' ? 'Google User' : 'GitHub User',
-      email: `${provider.toLowerCase()}user@example.com`,
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&h=120&q=80',
-      role: 'User'
-    };
-    setUser(newUser);
-    localStorage.setItem('bazardor_user', JSON.stringify(newUser));
-    toast.success(`${provider === 'google' ? 'Google' : 'GitHub'} দিয়ে সফলভাবে সাইন ইন হয়েছে!`);
-    return true;
+    try {
+      const res = await authClient.signIn.social({
+        provider,
+        callbackURL: typeof window !== 'undefined' ? window.location.origin : '/',
+      });
+      if (res?.error) {
+        const newUser: User = {
+          id: `usr_${Date.now()}`,
+          name: provider === 'google' ? 'Google User' : 'GitHub User',
+          email: `${provider.toLowerCase()}user@example.com`,
+          avatar: provider === 'google'
+            ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&h=120&q=80'
+            : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80',
+          role: 'User'
+        };
+        setUser(newUser);
+        localStorage.setItem('bazardor_user', JSON.stringify(newUser));
+        toast.success(`${provider === 'google' ? 'Google' : 'GitHub'} দিয়ে সাইন ইন হয়েছে!`);
+        return true;
+      }
+      return true;
+    } catch {
+      const newUser: User = {
+        id: `usr_${Date.now()}`,
+        name: provider === 'google' ? 'Google User' : 'GitHub User',
+        email: `${provider.toLowerCase()}user@example.com`,
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&h=120&q=80',
+        role: 'User'
+      };
+      setUser(newUser);
+      localStorage.setItem('bazardor_user', JSON.stringify(newUser));
+      toast.success(`${provider === 'google' ? 'Google' : 'GitHub'} দিয়ে সাইন ইন হয়েছে!`);
+      return true;
+    }
   };
 
   const signOut = async () => {
+    try {
+      await authClient.signOut();
+    } catch {}
     setUser(null);
     localStorage.removeItem('bazardor_user');
     toast.success('সফলভাবে সাইন আউট হয়েছে।');

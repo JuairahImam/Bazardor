@@ -29,8 +29,13 @@ export default function Navbar({ categories = defaultCategories }: NavbarProps) 
   const { user, signOut } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const todayBn = getTodayDateBengali();
+
+  useEffect(() => {
+    setImageError(false);
+  }, [user?.avatar]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -69,8 +74,8 @@ export default function Navbar({ categories = defaultCategories }: NavbarProps) 
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className="flex items-center gap-2.5 p-1.5 sm:px-3 sm:py-1.5 rounded-full sm:rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all cursor-pointer"
               >
-                <div className="relative w-8 h-8 rounded-full overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center text-sm font-semibold text-gray-700">
-                  {user.avatar ? (
+                <div className="relative w-8 h-8 rounded-full overflow-hidden border border-gray-200 bg-emerald-50 flex items-center justify-center text-sm font-semibold text-gray-700">
+                  {user.avatar && !imageError ? (
                     <Image
                       src={user.avatar}
                       alt={user.name}
@@ -78,9 +83,13 @@ export default function Navbar({ categories = defaultCategories }: NavbarProps) 
                       height={32}
                       className="w-full h-full object-cover"
                       unoptimized
+                      referrerPolicy="no-referrer"
+                      onError={() => setImageError(true)}
                     />
                   ) : (
-                    <span>{user.name.charAt(0)}</span>
+                    <span className="text-xs font-bold text-[#0E8345]">
+                      {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                    </span>
                   )}
                 </div>
                 <span className="hidden sm:inline-block text-sm font-semibold text-gray-800">
