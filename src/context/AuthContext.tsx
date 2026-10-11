@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, {
@@ -72,7 +73,7 @@ export function AuthProvider({
         }
       } finally {
         if (active) {
-  
+          // Remove legacy fake login data.
           localStorage.removeItem('bazardor_user');
           setLoading(false);
         }
