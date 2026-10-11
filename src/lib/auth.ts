@@ -1,10 +1,10 @@
 import { betterAuth } from "better-auth";
-import Database from "better-sqlite3";
+import { db } from "./db";
 
 export const auth = betterAuth({
-  database: new Database("./sqlite.db"),
-  secret: process.env.BETTER_AUTH_SECRET,
-  baseURL: process.env.BETTER_AUTH_URL,
+  database: db,
+  secret: process.env.BETTER_AUTH_SECRET || "bazardor_default_secret_32_characters_long",
+  baseURL: process.env.BETTER_AUTH_URL || "https://bazardor-gold.vercel.app",
   emailAndPassword: {
     enabled: true,
   },
